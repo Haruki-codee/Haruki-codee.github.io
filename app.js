@@ -11,42 +11,71 @@ let allPosts = [];
 async function fetchAndParsePosts() {
     allPosts = [];
     try {
-        // Automatically fetch the entire file tree from GitHub
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
-        if (!res.ok) throw new Error('Failed to fetch repo tree');
+        // Fetch repo tree with fallback for 'main' or 'master' branches
+        let res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
+        if (!res.ok) {
+            res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/master?recursive=1`);
+        }
+        if (!res.ok) throw new Error('Failed to fetch repo tree from main or master');
         
         const data = await res.json();
+        const activeBranch = res.url.includes('/main?') ? 'main' : 'master';
         
-        // Find all markdown files inside a subfolder
+        // Find all markdown files inside any subfolder
         const mdFiles = (data.tree || [])
-            .filter(item => item.path.endsWith('.md') && item.path.includes('/'))
+            .filter(item => item.path.toLowerCase().endsWith('.md') && item.path.includes('/'))
             .map(item => item.path);
+
+        console.log('Detected MD Files:', mdFiles);
 
         for (const file of mdFiles) {
             try {
-                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${file}`);
+                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${activeBranch}/${file}`);
                 if (!fileRes.ok) continue;
                 const text = await fileRes.text();
                 
-                const parts = text.split('---');
+                const parts = text.split(/---/);
+                let metadata = {};
+                let body = text;
+
                 if (parts.length >= 3) {
-                    const metadata = jsyaml.load(parts[1]);
-                    const body = parts.slice(2).join('---');
-                    allPosts.push({ ...metadata, body, filename: file });
+                    try {
+                        if (typeof jsyaml !== 'undefined') {
+                            metadata = jsyaml.load(parts[1]) || {};
+                        }
+                    } catch (e) {
+                        console.warn('YAML parse error on', file, e);
+                    }
+                    body = parts.slice(2).join('---');
                 }
+
+                // Fallback category to folder name if metadata is missing
+                const folderName = file.split('/')[0];
+                const category = metadata.category || folderName;
+
+                allPosts.push({
+                    title: metadata.title || file.split('/').pop().replace('.md', ''),
+                    date: metadata.date || 'Recent',
+                    summary: metadata.summary || '',
+                    image: metadata.image || null,
+                    ...metadata,
+                    category,
+                    body,
+                    filename: file
+                });
             } catch (err) {
-                console.error(`Failed to load ${file}`, err);
+                console.error(`Failed to process ${file}`, err);
             }
         }
     } catch (err) {
-        console.error('Failed to fetch repo structure', err);
+        console.error('Failed to fetch repository structure:', err);
     }
 
+    console.log('All Parsed Posts:', allPosts);
     showAllPosts();
     renderLogs();
 }
 
-// Render Horizontal Post Cards with Thumbnails
 function renderPosts(posts) {
     const container = document.getElementById('posts-container');
     if (!container) return;
@@ -78,14 +107,12 @@ function renderPosts(posts) {
     `).join('');
 }
 
-// Full Reading View when a card is clicked
 function openPostView(index) {
     const post = allPosts[index];
     if (!post) return;
 
     document.getElementById('current-view-title').innerText = `Home / ${post.title}`;
     const container = document.getElementById('posts-container');
-
     const htmlBody = typeof marked !== 'undefined' ? marked.parse(post.body) : post.body;
 
     container.innerHTML = `
@@ -188,6 +215,19 @@ function showAbout() {
     `;
 }
 
+function handleSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase();
+    
+    const filteredPosts = allPosts.filter(post => 
+        (post.title && post.title.toLowerCase().includes(query)) ||
+        (post.summary && post.summary.toLowerCase().includes(query)) ||
+        (post.category && post.category.toLowerCase().includes(query))
+    );
+    renderPosts(filteredPosts);
+}
+
 function toggleTheme() {
     const html = document.documentElement;
     const avatar = document.getElementById('avatar-img');
@@ -225,55 +265,57 @@ function initTheme() {
     }
 }
 
-async function fetchAndParsePosts() {
-    allPosts = [];
+async function renderLogs() {
+    const container = document.getElementById('logs-container');
+    if (!container) return;
+
     try {
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
-        if (!res.ok) throw new Error('Failed to fetch repo tree');
+        const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/commits?per_page=15`);
+        if (!response.ok) throw new Error('Failed to fetch commits');
         
-        const data = await res.json();
-        
-        // Find all markdown files inside subfolders (case-insensitive check)
-        const mdFiles = (data.tree || [])
-            .filter(item => item.path.toLowerCase().endsWith('.md') && item.path.includes('/'))
-            .map(item => item.path);
+        const commits = await response.json();
+        const categoryLogs = [];
 
-        console.log('Markdown files detected:', mdFiles);
+        for (const item of commits) {
+            const msg = item.commit.message;
+            
+            // Check if commit message matches any detected post category
+            const matchingCategory = allPosts.find(p => 
+                p.category && msg.toLowerCase().includes(p.category.toLowerCase())
+            );
 
-        for (const file of mdFiles) {
-            try {
-                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${file}`);
-                if (!fileRes.ok) {
-                    console.error(`Could not fetch content for: ${file}`);
-                    continue;
-                }
-                const text = await fileRes.text();
-                
-                // Fallback frontmatter parsing
-                const parts = text.split(/^---$/m);
-                if (parts.length >= 3) {
-                    const metadata = jsyaml.load(parts[1]);
-                    const body = parts.slice(2).join('---');
-                    
-                    // Fallback: If no category in metadata, infer from folder name
-                    const folderCategory = file.split('/')[0];
-                    const category = metadata.category || folderCategory;
-
-                    allPosts.push({ ...metadata, category, body, filename: file });
-                } else {
-                    console.warn(`File ${file} missing valid --- frontmatter delimiters.`);
-                }
-            } catch (err) {
-                console.error(`Failed to load ${file}`, err);
+            if (matchingCategory) {
+                categoryLogs.push({
+                    date: new Date(item.commit.author.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                    message: msg,
+                    folder: matchingCategory.category
+                });
             }
         }
-    } catch (err) {
-        console.error('Failed to fetch repo structure', err);
-    }
 
-    console.log('Final parsed posts:', allPosts);
-    showAllPosts();
-    renderLogs();
+        if (categoryLogs.length === 0) {
+            container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
+            return;
+        }
+
+        container.innerHTML = categoryLogs.map(log => `
+            <div class="relative pl-6 mb-4">
+                <span class="absolute -left-[17px] top-1.5 w-2 h-2 rounded-full bg-indigo-500 border-2 border-white dark:border-darkBg shadow-sm"></span>
+                <div class="text-xs">
+                    <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        <span class="text-[10px] font-mono text-indigo-500 dark:text-indigo-400/80">${log.date}</span>
+                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 truncate max-w-[110px]">
+                            📁 ${log.folder}/
+                        </span>
+                    </div>
+                    <p class="font-medium text-gray-800 dark:text-gray-300 line-clamp-2 leading-tight">${log.message}</p>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
+    }
 }
 
 window.onload = () => {
