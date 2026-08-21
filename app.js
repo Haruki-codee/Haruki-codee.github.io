@@ -225,68 +225,55 @@ function initTheme() {
     }
 }
 
-async function renderLogs() {
-    const container = document.getElementById('logs-container');
-    if (!container) return;
-
-    // Added machine_learning/ to allowed categories array below
-    const allowedCategories = ['machine_learning/', 'projects/', 'blog/', 'gsoc/', 'notes/'];
-
+async function fetchAndParsePosts() {
+    allPosts = [];
     try {
-        const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/commits?per_page=15`);
-        if (!response.ok) throw new Error('Failed to fetch commits');
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
+        if (!res.ok) throw new Error('Failed to fetch repo tree');
         
-        const commits = await response.json();
+        const data = await res.json();
+        
+        // Find all markdown files inside subfolders (case-insensitive check)
+        const mdFiles = (data.tree || [])
+            .filter(item => item.path.toLowerCase().endsWith('.md') && item.path.includes('/'))
+            .map(item => item.path);
 
-        const commitDetails = await Promise.all(
-            commits.map(async (item) => {
-                const detailRes = await fetch(item.url);
-                if (!detailRes.ok) return null;
-                const detailData = await detailRes.json();
+        console.log('Markdown files detected:', mdFiles);
+
+        for (const file of mdFiles) {
+            try {
+                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${file}`);
+                if (!fileRes.ok) {
+                    console.error(`Could not fetch content for: ${file}`);
+                    continue;
+                }
+                const text = await fileRes.text();
                 
-                const categoryFolders = (detailData.files || [])
-                    .filter(f => f.filename.includes('/')) 
-                    .map(f => f.filename.split('/')[0].toLowerCase() + '/')
-                    .filter(folder => allowedCategories.includes(folder));
-                
-                const uniqueFolders = [...new Set(categoryFolders)];
-                if (uniqueFolders.length === 0) return null;
+                // Fallback frontmatter parsing
+                const parts = text.split(/^---$/m);
+                if (parts.length >= 3) {
+                    const metadata = jsyaml.load(parts[1]);
+                    const body = parts.slice(2).join('---');
+                    
+                    // Fallback: If no category in metadata, infer from folder name
+                    const folderCategory = file.split('/')[0];
+                    const category = metadata.category || folderCategory;
 
-                return {
-                    date: new Date(item.commit.author.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                    message: item.commit.message,
-                    folders: uniqueFolders
-                };
-            })
-        );
-
-        const categoryLogs = commitDetails.filter(log => log !== null);
-
-        if (categoryLogs.length === 0) {
-            container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
-            return;
+                    allPosts.push({ ...metadata, category, body, filename: file });
+                } else {
+                    console.warn(`File ${file} missing valid --- frontmatter delimiters.`);
+                }
+            } catch (err) {
+                console.error(`Failed to load ${file}`, err);
+            }
         }
-
-        container.innerHTML = categoryLogs.map(log => `
-            <div class="relative pl-6">
-                <span class="absolute -left-[17px] top-1.5 w-2 h-2 rounded-full bg-indigo-500 border-2 border-white dark:border-darkBg shadow-sm"></span>
-                <div class="text-xs">
-                    <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span class="text-[10px] font-mono text-indigo-500 dark:text-indigo-400/80">${log.date}</span>
-                        ${log.folders.map(folder => `
-                            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 truncate max-w-[110px]" title="${folder}">
-                                📁 ${folder}
-                            </span>
-                        `).join('')}
-                    </div>
-                    <p class="font-medium text-gray-800 dark:text-gray-300 line-clamp-2 leading-tight">${log.message}</p>
-                </div>
-            </div>
-        `).join('');
-
     } catch (err) {
-        container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
+        console.error('Failed to fetch repo structure', err);
     }
+
+    console.log('Final parsed posts:', allPosts);
+    showAllPosts();
+    renderLogs();
 }
 
 window.onload = () => {
