@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - Rishabh Sharma</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#08080a',
+                        cardBg: '#121216',
+                        borderClr: '#23232a',
+                        accentGlow: '#6366f1',
+                        accentText: '#94a3b8'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JS-YAML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <style>
+        /* Global Smooth Transition across color changes */
+        *, *::before, *::after {
+            transition-property: background-color, border-color, color, fill, stroke;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+
+        /* Middle Section Grid Wallpaper */
+        .bg-grid-wallpaper {
+            background-color: transparent;
+            background-image: radial-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Custom Thin Scrollbar */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-darkBg text-gray-900 dark:text-gray-100 min-h-screen font-sans flex antialiased selection:bg-indigo-500/30 selection:text-indigo-200 justify-between">
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-64 p-6 hidden md:flex flex-col justify-between border-r border-gray-200 dark:border-borderClr bg-white dark:bg-darkBg min-h-screen flex-shrink-0">
+        <div>
+            <!-- Profile Info -->
+            <div class="flex flex-col items-center text-center mb-8 p-4 bg-gray-50 dark:bg-cardBg/50 border border-gray-200 dark:border-borderClr rounded-xl">
+                <img id="avatar-img" 
+                     src="./yuta.jpg" 
+                     alt="Avatar" 
+                     class="w-20 h-20 rounded-full border-2 border-indigo-500/30 mb-3 object-cover shadow-lg shadow-indigo-500/10">
+                <h1 class="text-base font-bold text-gray-900 dark:text-gray-100">Rishabh Sharma</h1>
+                <p class="text-xs text-gray-500 dark:text-accentText italic mt-0.5">optimizing loss functions and game mechanics</p>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5 text-xs font-medium">
+                <a id="nav-home" href="#" onclick="showAllPosts()" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-semibold">
+                    <i class="fa-solid fa-house"></i> Home
+                </a>
+                <a id="nav-category" href="#" onclick="showCategoryFolders()" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-600 dark:text-accentText hover:bg-gray-100 dark:hover:bg-cardBg hover:text-gray-900 dark:hover:text-gray-200 border border-transparent">
+                    <i class="fa-solid fa-folder-open"></i> Category
+                </a>
+                <a id="nav-about" href="#" onclick="showAbout()" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-600 dark:text-accentText hover:bg-gray-100 dark:hover:bg-cardBg hover:text-gray-900 dark:hover:text-gray-200 border border-transparent">
+                    <i class="fa-solid fa-address-card"></i> About
+                </a>
+            </nav>
+        </div>
+
+        <!-- Footer / Theme Toggle -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-borderClr text-gray-500 dark:text-accentText">
+            <button onclick="toggleTheme()" title="Toggle Theme" class="p-2 hover:bg-gray-200 dark:hover:bg-cardBg hover:text-gray-900 dark:hover:text-white rounded-lg border border-transparent hover:border-gray-300 dark:hover:border-borderClr">
+                <i id="theme-icon" class="fa-solid fa-sun text-xs"></i>
+            </button>
+            <div class="flex items-center gap-3 text-sm">
+                <a href="https://github.com/Haruki-codee" class="hover:text-indigo-500"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/rishabh-sharma-388609419/" class="hover:text-indigo-500"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="#" class="hover:text-indigo-500"><i class="fa-solid fa-envelope"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA WITH WALLPAPER -->
+    <main class="flex-1 p-6 md:p-8 bg-grid-wallpaper relative min-h-screen">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-borderClr">
+            <h2 id="current-view-title" class="text-xs font-mono uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-500/20">Home / All Posts</h2>
+        </div>
+        <div id="posts-container" class="space-y-4">
+            <!-- Dynamic Markdown posts injected here -->
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR (ACTIVITY LOG & GIF) -->
+    <aside class="w-80 p-5 hidden xl:flex flex-col gap-4 border-l border-gray-200 dark:border-borderClr bg-white dark:bg-darkBg min-h-screen sticky top-0 h-screen overflow-hidden flex-shrink-0">
+        
+        <!-- Search Bar -->
+        <div class="relative flex-shrink-0">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-xs text-gray-400 dark:text-accentText"></i>
+            <input type="text" id="search-input" onkeyup="handleSearch()" placeholder="Search posts..." class="w-full bg-gray-50 dark:bg-cardBg/60 border border-gray-200 dark:border-borderClr rounded-xl py-2 pl-9 pr-4 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:border-indigo-500/50 shadow-inner">
+        </div>
+
+        <!-- Half-Screen Activity Log Container -->
+        <div class="p-4 bg-gray-50 dark:bg-cardBg/40 border border-gray-200 dark:border-borderClr rounded-xl h-1/2 flex flex-col min-h-0 flex-shrink-0">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-borderClr flex-shrink-0">
+                <h3 class="text-xs font-mono font-semibold text-gray-500 dark:text-accentText uppercase tracking-wider">
+                    Activity Log
+                </h3>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+            
+            <div id="logs-container" class="relative border-l border-gray-300 dark:border-borderClr ml-2 space-y-4 h-full max-h-full overflow-y-auto pr-2.5 scrollbar-thin">
+                <!-- Dynamic GitHub commits injected here -->
+            </div>
+        </div>
+
+        <!-- GIF Banner Area (Pinned to Bottom) -->
+        <div class="flex-shrink-0 mt-auto">
+            <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-borderClr bg-gray-50 dark:bg-cardBg/40 p-1.5 shadow-sm min-h-[144px] flex items-center justify-center">
+                <img id="sidebar-gif" 
+                     src="./assest/japan-street.webp" 
+                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=80';"
+                     alt="Coding Banner" 
+                     class="w-full h-36 object-cover rounded-lg">
+            </div>
+        </div>
+
+    </aside>
+
+    <script src="app.js"></script>
+</body>
+</html>
