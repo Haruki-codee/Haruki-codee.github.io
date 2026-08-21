@@ -212,6 +212,9 @@ async function renderLogs() {
     const container = document.getElementById('logs-container');
     if (!container) return;
 
+    // List of system folders to ignore completely
+    const ignoredFolders = ['assest/', 'assets/', 'css/', 'js/', '.github/'];
+
     try {
         const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
         let existingFolders = [];
@@ -219,7 +222,9 @@ async function renderLogs() {
             const treeData = await treeRes.json();
             existingFolders = (treeData.tree || [])
                 .filter(item => item.type === 'tree')
-                .map(item => item.path.toLowerCase() + '/');
+                .map(item => item.path.toLowerCase() + '/')
+                // Filter out non-category folders
+                .filter(folder => !ignoredFolders.includes(folder));
         }
 
         if (existingFolders.length === 0) {
@@ -241,7 +246,8 @@ async function renderLogs() {
                 const categoryFolders = (detailData.files || [])
                     .filter(f => f.filename.includes('/')) 
                     .map(f => f.filename.split('/')[0].toLowerCase() + '/')
-                    .filter(folder => existingFolders.includes(folder));
+                    // Make sure folder exists and is NOT in ignoredFolders
+                    .filter(folder => existingFolders.includes(folder) && !ignoredFolders.includes(folder));
                 
                 const uniqueFolders = [...new Set(categoryFolders)];
                 if (uniqueFolders.length === 0) return null;
@@ -282,7 +288,6 @@ async function renderLogs() {
         container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
     }
 }
-
 window.onload = () => {
     initTheme();
     fetchAndParsePosts();
