@@ -1,6 +1,6 @@
 const pfpImages = {
-    light: './asset/spidey.jpg',
-    dark: './asset/black.jpg'
+    light: './assest/spidey.jpg',
+    dark: './assest/black.jpg'
 };
 
 const GITHUB_USERNAME = 'Haruki-codee';
