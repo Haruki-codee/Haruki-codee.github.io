@@ -212,26 +212,11 @@ async function renderLogs() {
     const container = document.getElementById('logs-container');
     if (!container) return;
 
-    // List of system folders to ignore completely
-    const ignoredFolders = ['assest/', 'assets/', 'css/', 'js/', '.github/'];
+    // ONLY show these specific category folders in the activity log
+    // Add your actual category folder names here (lowercase)
+    const allowedCategories = ['projects/', 'blog/', 'gsoc/', 'notes/'];
 
     try {
-        const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
-        let existingFolders = [];
-        if (treeRes.ok) {
-            const treeData = await treeRes.json();
-            existingFolders = (treeData.tree || [])
-                .filter(item => item.type === 'tree')
-                .map(item => item.path.toLowerCase() + '/')
-                // Filter out non-category folders
-                .filter(folder => !ignoredFolders.includes(folder));
-        }
-
-        if (existingFolders.length === 0) {
-            container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
-            return;
-        }
-
         const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/commits?per_page=15`);
         if (!response.ok) throw new Error('Failed to fetch commits');
         
@@ -246,8 +231,8 @@ async function renderLogs() {
                 const categoryFolders = (detailData.files || [])
                     .filter(f => f.filename.includes('/')) 
                     .map(f => f.filename.split('/')[0].toLowerCase() + '/')
-                    // Make sure folder exists and is NOT in ignoredFolders
-                    .filter(folder => existingFolders.includes(folder) && !ignoredFolders.includes(folder));
+                    // Only keep folders that are in our explicit allowed list
+                    .filter(folder => allowedCategories.includes(folder));
                 
                 const uniqueFolders = [...new Set(categoryFolders)];
                 if (uniqueFolders.length === 0) return null;
