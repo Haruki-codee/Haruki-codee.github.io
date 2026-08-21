@@ -229,8 +229,8 @@ async function renderLogs() {
     const container = document.getElementById('logs-container');
     if (!container) return;
 
-    // Add your category folder names here to display them in the activity log
-    const allowedCategories = ['projects/', 'blog/', 'gsoc/', 'notes/'];
+    // Added machine_learning/ to allowed categories array below
+    const allowedCategories = ['machine_learning/', 'projects/', 'blog/', 'gsoc/', 'notes/'];
 
     try {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/commits?per_page=15`);
