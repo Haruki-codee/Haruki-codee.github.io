@@ -1,38 +1,52 @@
-const postFiles = [];
-
 const pfpImages = {
-    light: './assest/spidey.jpg',
-    dark: './assest/black.jpg'
+    light: './assets/spidey.jpg',
+    dark: './assets/black.jpg'
 };
 
 const GITHUB_USERNAME = 'Haruki-codee';
-const GITHUB_REPO = 'Haruki-codee.github.io';
+const GITHUB_REPO = 'haruki-codee.github.io';
 
 let allPosts = [];
 
 async function fetchAndParsePosts() {
     allPosts = [];
-    for (const file of postFiles) {
-        try {
-            const res = await fetch(file);
-            if (!res.ok) continue;
-            const text = await res.text();
-            
-            const parts = text.split('---');
-            if (parts.length >= 3) {
-                const metadata = jsyaml.load(parts[1]);
-                const body = parts.slice(2).join('---');
-                allPosts.push({ ...metadata, body, filename: file });
+    try {
+        // Automatically fetch the entire file tree from GitHub
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
+        if (!res.ok) throw new Error('Failed to fetch repo tree');
+        
+        const data = await res.json();
+        
+        // Find all markdown files inside a subfolder
+        const mdFiles = (data.tree || [])
+            .filter(item => item.path.endsWith('.md') && item.path.includes('/'))
+            .map(item => item.path);
+
+        for (const file of mdFiles) {
+            try {
+                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${file}`);
+                if (!fileRes.ok) continue;
+                const text = await fileRes.text();
+                
+                const parts = text.split('---');
+                if (parts.length >= 3) {
+                    const metadata = jsyaml.load(parts[1]);
+                    const body = parts.slice(2).join('---');
+                    allPosts.push({ ...metadata, body, filename: file });
+                }
+            } catch (err) {
+                console.error(`Failed to load ${file}`, err);
             }
-        } catch (err) {
-            console.error(`Failed to load ${file}`, err);
         }
+    } catch (err) {
+        console.error('Failed to fetch repo structure', err);
     }
+
     showAllPosts();
     renderLogs();
 }
 
-// Render Horizontal Post Cards with Thumbnails (Matching Screenshot UI)
+// Render Horizontal Post Cards with Thumbnails
 function renderPosts(posts) {
     const container = document.getElementById('posts-container');
     if (!container) return;
@@ -97,6 +111,7 @@ function openPostView(index) {
 function showCategoryFolders() {
     setActiveNav('nav-category');
     document.getElementById('current-view-title').innerText = 'Category / Directory';
+    history.pushState(null, '', window.location.pathname);
     
     const container = document.getElementById('posts-container');
     const categoriesMap = {};
@@ -142,6 +157,7 @@ function openFolder(category) {
 function showAllPosts() {
     document.getElementById('current-view-title').innerText = 'Home / All Posts';
     setActiveNav('nav-home');
+    history.pushState(null, '', window.location.pathname);
     renderPosts(allPosts);
 }
 
@@ -159,6 +175,7 @@ function setActiveNav(navId) {
 function showAbout() {
     setActiveNav('nav-about');
     document.getElementById('current-view-title').innerText = 'About / Profile';
+    history.pushState(null, '', window.location.pathname);
     
     const container = document.getElementById('posts-container');
     container.innerHTML = `
@@ -212,8 +229,7 @@ async function renderLogs() {
     const container = document.getElementById('logs-container');
     if (!container) return;
 
-    // ONLY show these specific category folders in the activity log
-    // Add your actual category folder names here (lowercase)
+    // Add your category folder names here to display them in the activity log
     const allowedCategories = ['projects/', 'blog/', 'gsoc/', 'notes/'];
 
     try {
@@ -231,7 +247,6 @@ async function renderLogs() {
                 const categoryFolders = (detailData.files || [])
                     .filter(f => f.filename.includes('/')) 
                     .map(f => f.filename.split('/')[0].toLowerCase() + '/')
-                    // Only keep folders that are in our explicit allowed list
                     .filter(folder => allowedCategories.includes(folder));
                 
                 const uniqueFolders = [...new Set(categoryFolders)];
@@ -273,6 +288,7 @@ async function renderLogs() {
         container.innerHTML = `<div class="text-[11px] text-gray-400 dark:text-accentText py-2 italic pl-4">No active category updates found.</div>`;
     }
 }
+
 window.onload = () => {
     initTheme();
     fetchAndParsePosts();
