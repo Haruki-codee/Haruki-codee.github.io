@@ -11,7 +11,6 @@ let allPosts = [];
 async function fetchAndParsePosts() {
     allPosts = [];
     try {
-        // Fetch repo tree with fallback for 'main' or 'master' branches
         let res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/main?recursive=1`);
         if (!res.ok) {
             res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/git/trees/master?recursive=1`);
@@ -19,42 +18,41 @@ async function fetchAndParsePosts() {
         if (!res.ok) throw new Error('Failed to fetch repo tree from main or master');
         
         const data = await res.json();
-        const activeBranch = res.url.includes('/main?') ? 'main' : 'master';
         
-        // Find all markdown files inside any subfolder
         const mdFiles = (data.tree || [])
             .filter(item => item.path.toLowerCase().endsWith('.md') && item.path.includes('/'))
             .map(item => item.path);
 
-        console.log('Detected MD Files:', mdFiles);
-
         for (const file of mdFiles) {
             try {
-                const fileRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${activeBranch}/${file}`);
+                // Fetch relative path to resolve live site CORS/CDN delays
+                const fileRes = await fetch(`./${file}`);
                 if (!fileRes.ok) continue;
                 const text = await fileRes.text();
                 
-                const parts = text.split(/---/);
                 let metadata = {};
                 let body = text;
 
-                if (parts.length >= 3) {
-                    try {
-                        if (typeof jsyaml !== 'undefined') {
-                            metadata = jsyaml.load(parts[1]) || {};
+                if (text.startsWith('---')) {
+                    const parts = text.split(/^---$/m);
+                    if (parts.length >= 3) {
+                        try {
+                            if (typeof jsyaml !== 'undefined') {
+                                metadata = jsyaml.load(parts[1]) || {};
+                            }
+                        } catch (e) {
+                            console.warn('YAML parse error on', file, e);
                         }
-                    } catch (e) {
-                        console.warn('YAML parse error on', file, e);
+                        body = parts.slice(2).join('---').trim();
                     }
-                    body = parts.slice(2).join('---');
                 }
 
-                // Fallback category to folder name if metadata is missing
-                const folderName = file.split('/')[0];
+                const pathParts = file.split('/');
+                const folderName = pathParts[0].replace(/_/g, ' ');
                 const category = metadata.category || folderName;
 
                 allPosts.push({
-                    title: metadata.title || file.split('/').pop().replace('.md', ''),
+                    title: metadata.title || pathParts[pathParts.length - 1].replace('.md', ''),
                     date: metadata.date || 'Recent',
                     summary: metadata.summary || '',
                     image: metadata.image || null,
@@ -71,7 +69,6 @@ async function fetchAndParsePosts() {
         console.error('Failed to fetch repository structure:', err);
     }
 
-    console.log('All Parsed Posts:', allPosts);
     showAllPosts();
     renderLogs();
 }
@@ -228,6 +225,24 @@ function handleSearch() {
     renderPosts(filteredPosts);
 }
 
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    if (menu) menu.classList.toggle('hidden');
+}
+
+function handleSearchMobile() {
+    const searchInput = document.getElementById('search-input-mobile');
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase();
+    
+    const filteredPosts = allPosts.filter(post => 
+        (post.title && post.title.toLowerCase().includes(query)) ||
+        (post.summary && post.summary.toLowerCase().includes(query)) ||
+        (post.category && post.category.toLowerCase().includes(query))
+    );
+    renderPosts(filteredPosts);
+}
+
 function toggleTheme() {
     const html = document.documentElement;
     const avatar = document.getElementById('avatar-img');
@@ -279,7 +294,6 @@ async function renderLogs() {
         for (const item of commits) {
             const msg = item.commit.message;
             
-            // Check if commit message matches any detected post category
             const matchingCategory = allPosts.find(p => 
                 p.category && msg.toLowerCase().includes(p.category.toLowerCase())
             );
