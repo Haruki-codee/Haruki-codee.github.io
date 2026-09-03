@@ -25,7 +25,6 @@ async function fetchAndParsePosts() {
 
         for (const file of mdFiles) {
             try {
-                // Fetch relative path to resolve live site CORS/CDN delays
                 const fileRes = await fetch(`./${file}`);
                 if (!fileRes.ok) continue;
                 const text = await fileRes.text();
@@ -245,19 +244,19 @@ function handleSearchMobile() {
 
 function toggleTheme() {
     const html = document.documentElement;
-    const avatar = document.getElementById('avatar-img');
+    const avatars = [document.getElementById('avatar-img'), document.getElementById('avatar-img-mobile')];
     const icon = document.getElementById('theme-icon');
 
     requestAnimationFrame(() => {
         if (html.classList.contains('dark')) {
             html.classList.remove('dark');
             localStorage.setItem('theme', 'light');
-            if (avatar) avatar.src = pfpImages.light;
+            avatars.forEach(img => { if (img) img.src = pfpImages.light; });
             if (icon) icon.className = 'fa-solid fa-moon text-xs';
         } else {
             html.classList.add('dark');
             localStorage.setItem('theme', 'dark');
-            if (avatar) avatar.src = pfpImages.dark;
+            avatars.forEach(img => { if (img) img.src = pfpImages.dark; });
             if (icon) icon.className = 'fa-solid fa-sun text-xs';
         }
     });
@@ -266,16 +265,16 @@ function toggleTheme() {
 function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     const html = document.documentElement;
-    const avatar = document.getElementById('avatar-img');
+    const avatars = [document.getElementById('avatar-img'), document.getElementById('avatar-img-mobile')];
     const icon = document.getElementById('theme-icon');
 
     if (savedTheme === 'light') {
         html.classList.remove('dark');
-        if (avatar) avatar.src = pfpImages.light;
+        avatars.forEach(img => { if (img) img.src = pfpImages.light; });
         if (icon) icon.className = 'fa-solid fa-moon text-xs';
     } else {
         html.classList.add('dark');
-        if (avatar) avatar.src = pfpImages.dark;
+        avatars.forEach(img => { if (img) img.src = pfpImages.dark; });
         if (icon) icon.className = 'fa-solid fa-sun text-xs';
     }
 }
