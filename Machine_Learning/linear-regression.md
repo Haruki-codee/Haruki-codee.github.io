@@ -61,8 +61,7 @@ Because the regression line is essentially a "moving average," you need to under
 1. **Derivative** = slope at a point. You already used "slope" for m — same idea, just at any point on a curve, not just a straight line.
 2. At the lowest point of a curve, the slope is flat (zero). This is why we set ∂E/∂b = 0 and ∂E/∂m = 0 in your derivation — we're finding the bottom of the error "bowl," where it can't get any lower.
 3. **Partial derivative** = take the derivative of one variable, freeze the other. Your error E depends on both m and b, so when you do ∂E/∂b, you treat m like a fixed number for that step, and vice versa. 
-4. The "2" that appears in your derivation comes from a basic calculus rule (chain rule) for differentiating squared terms — don't need to explain the rule itself, just note where that 2 comes from so it's not "magic." 
-
+ 
 # Creating Simple Linear Regression From Scratch
 
 The slope-intercept equation is y = mx + b, where y is the dependent variable, x is the independent variable, m is the slope, and b is the intercept. The model's predictions depend entirely on the values of m and b.
