@@ -8,6 +8,26 @@ const GITHUB_REPO = 'haruki-codee.github.io';
 
 let allPosts = [];
 
+// Safety net: if marked.js failed to load from index.html (CDN blocked, typo, etc.),
+// try loading it dynamically once, so posts don't silently render as raw markdown.
+function ensureMarkedLoaded() {
+    return new Promise((resolve) => {
+        if (typeof marked !== 'undefined') {
+            resolve(true);
+            return;
+        }
+        console.warn('marked.js not found — attempting to load it dynamically.');
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.onload = () => resolve(typeof marked !== 'undefined');
+        script.onerror = () => {
+            console.error('Failed to load marked.js dynamically.');
+            resolve(false);
+        };
+        document.head.appendChild(script);
+    });
+}
+
 async function fetchAndParsePosts() {
     allPosts = [];
     try {
@@ -103,13 +123,15 @@ function renderPosts(posts) {
     `).join('');
 }
 
-function openPostView(index) {
+async function openPostView(index) {
     const post = allPosts[index];
     if (!post) return;
 
     document.getElementById('current-view-title').innerText = `Home / ${post.title}`;
     const container = document.getElementById('posts-container');
-    const htmlBody = typeof marked !== 'undefined' ? marked.parse(post.body) : post.body;
+
+    const markedReady = await ensureMarkedLoaded();
+    const htmlBody = markedReady ? marked.parse(post.body) : post.body;
 
     container.innerHTML = `
         <div class="bg-white dark:bg-cardBg/60 backdrop-blur-sm border border-gray-200 dark:border-borderClr rounded-2xl p-6 md:p-8 space-y-6">

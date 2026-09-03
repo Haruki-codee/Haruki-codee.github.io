@@ -6,6 +6,7 @@
     <title>Rishabh Sharma</title>
     <link rel="icon" type="image/x-icon" href="./assest/atom.jpg">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -52,6 +53,61 @@
 
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
             background: rgba(99, 102, 241, 0.6);
+        }
+
+        /* Basic markdown content styling so rendered posts look intentional, not default-browser-ugly */
+        .prose h1, .prose h2, .prose h3 {
+            font-weight: 700;
+            margin-top: 1.25em;
+            margin-bottom: 0.5em;
+            color: inherit;
+        }
+        .prose h1 { font-size: 1.4em; }
+        .prose h2 { font-size: 1.2em; }
+        .prose h3 { font-size: 1.05em; }
+        .prose p { margin-bottom: 0.85em; line-height: 1.7; }
+        .prose ul, .prose ol { margin: 0.5em 0 0.85em 1.25em; }
+        .prose li { margin-bottom: 0.25em; }
+        .prose code {
+            background: rgba(99, 102, 241, 0.1);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .prose pre {
+            background: #0d0d10;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 8px;
+            padding: 1em;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        .prose pre code {
+            background: none;
+            padding: 0;
+        }
+        .prose blockquote {
+            border-left: 3px solid #6366f1;
+            padding-left: 1em;
+            margin: 1em 0;
+            color: inherit;
+            opacity: 0.9;
+        }
+        .prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+            font-size: 0.85em;
+        }
+        .prose th, .prose td {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 0.5em 0.75em;
+            text-align: left;
+        }
+        .prose img {
+            border-radius: 8px;
+            max-width: 100%;
+            margin: 0.75em 0;
         }
     </style>
 </head>

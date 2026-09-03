@@ -136,7 +136,7 @@ import pandas as pd
 Let's first do it manually.'''
 
 df = pd.read_csv('placement.csv')  # two columns: one feature, one label
-shuffled_data = df.sample(frac=1, random_state=42).reset_index(drop=True)
+shuffled_data = df.sample(frac=1, random_state=2).reset_index(drop=True)
 
 # frac=1 means 100% of the data gets shuffled.
 # random_state=2 ensures we get the same shuffle every time we run the code
