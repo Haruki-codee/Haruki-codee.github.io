@@ -60,7 +60,7 @@ Because the regression line is essentially a "moving average," you need to under
 # Calculus
 1. **Derivative** = slope at a point. You already used "slope" for m — same idea, just at any point on a curve, not just a straight line.
 2. At the lowest point of a curve, the slope is flat (zero). This is why we set ∂E/∂b = 0 and ∂E/∂m = 0 in your derivation — we're finding the bottom of the error "bowl," where it can't get any lower.
-3. **Partial derivative** = take the derivative of one variable, freeze the other. Your error E depends on both m and b, so when you do ∂E/∂b, you treat m like a fixed number for that step, and vice versa. This is the one thing that might confuse readers most — worth 2-3 lines.
+3. **Partial derivative** = take the derivative of one variable, freeze the other. Your error E depends on both m and b, so when you do ∂E/∂b, you treat m like a fixed number for that step, and vice versa. 
 4. The "2" that appears in your derivation comes from a basic calculus rule (chain rule) for differentiating squared terms — don't need to explain the rule itself, just note where that 2 comes from so it's not "magic." 
 
 # Creating Simple Linear Regression From Scratch
@@ -139,7 +139,7 @@ df = pd.read_csv('placement.csv')  # two columns: one feature, one label
 shuffled_data = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
 # frac=1 means 100% of the data gets shuffled.
-# random_state=42 ensures we get the same shuffle every time we run the code
+# random_state=2 ensures we get the same shuffle every time we run the code
 # (without it, the split would be different each run).
 
 train_size = int(0.8 * len(shuffled_data))
@@ -179,6 +179,18 @@ print(lr.intercept_)
 ```
 
 Comparing the two: the manual version's `m` and `b` should land close to sklearn's `coef_` and `intercept_` — small differences are expected since the train/test split is randomized differently in each version.
+
+> **Key takeaway: `random_state` doesn't work the way people assume**
+>
+> `random_state` is a seed that makes a shuffle *reproducible* — run the code again with the same seed, and you get the same result back. But using the **same** `random_state` value across different libraries does **not** guarantee the same split.
+>
+> Why? The seed only fixes the random number generator's starting point — it doesn't fix the *shuffling algorithm*. pandas' `.sample()` and sklearn's `train_test_split()` both sit on top of NumPy's RNG, but each consumes it in a different internal sequence. Same seed, different algorithm → different shuffle order → different train/test rows → different m and b.
+>
+> **Proof, using `random_state=2` in both versions:**
+> - Manual (pandas `.sample`) → b = **-1.078**
+> - sklearn (`train_test_split`) → intercept_ = **-0.896**
+>
+> Same seed number, different results — because they're different shuffling methods under the hood, not the same method with two names. `random_state` guarantees reproducibility *within* one function across runs — it does not guarantee two different libraries will agree just because you gave them the same numbe
 
 ---
 
